@@ -22,10 +22,16 @@ export default function Home() {
 
   // Initialize the worker
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Initialize worker only in client-side
-      if (!whisperWorker && window.Worker) {
+    // S'assurer que nous sommes dans l'environnement du navigateur
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+      return;
+    }
+
+    // Initialiser le worker uniquement côté client
+    const initializeWorker = async () => {
+      if (!whisperWorker) {
         try {
+          // Utiliser dynamic import pour éviter les problèmes de SSR
           whisperWorker = new Worker(new URL('./workers/whisperWorker.ts', import.meta.url));
           
           whisperWorker.onmessage = async (event) => {
@@ -40,34 +46,38 @@ export default function Home() {
             if (status === 'complete' && transcription) {
               setTranscription(transcription);
               setProgress(100);
-              setStatusMessage('Generating summary...');
+              setStatusMessage('Génération du résumé...');
               
-              // Generate summary from transcription
+              // Générer le résumé à partir de la transcription
               const generatedSummary = await generateSummary(transcription);
               setSummary(generatedSummary);
               setIsProcessing(false);
             }
             
             if (status === 'error') {
-              console.error('Worker error:', message);
-              alert(`Error: ${message}`);
+              console.error('Erreur du worker:', message);
+              alert(`Erreur: ${message}`);
               setIsProcessing(false);
             }
           };
           
           whisperWorker.onerror = (error) => {
-            console.error('Worker error:', error);
-            alert('An error occurred with the transcription worker.');
+            console.error('Erreur du worker:', error);
+            alert('Une erreur est survenue avec le worker de transcription.');
             setIsProcessing(false);
           };
         } catch (error) {
-          console.error('Failed to initialize worker:', error);
-          // Fall back to mock implementation if worker fails
+          console.error('Échec de l\'initialisation du worker:', error);
+          // Utiliser l'implémentation de secours si le worker échoue
+          alert('Impossible d\'initialiser le worker de transcription. Utilisation du mode de secours.');
         }
       }
-    }
+    };
+
+    // Initialiser le worker
+    initializeWorker();
     
-    // Clean up worker on component unmount
+    // Nettoyer le worker lors du démontage du composant
     return () => {
       if (whisperWorker) {
         whisperWorker.terminate();
@@ -79,29 +89,43 @@ export default function Home() {
   const handleFileUpload = async (file: File) => {
     if (!file) return;
     
+    console.log('Fichier sélectionné:', file.name, file.type, file.size);
     setFileName(file.name);
     setIsProcessing(true);
     setProgress(0);
     setTranscription('');
     setSummary('');
-    setStatusMessage('Preparing audio file...');
+    setStatusMessage('Préparation du fichier audio...');
     
     try {
+      // Vérifier si le worker est disponible
       if (whisperWorker) {
-        // Use the worker for transcription
-        const arrayBuffer = await file.arrayBuffer();
-        whisperWorker.postMessage({
-          type: 'transcribe',
-          audioData: arrayBuffer
-        });
+        console.log('Utilisation du worker pour la transcription');
+        try {
+          // Convertir le fichier en ArrayBuffer
+          const arrayBuffer = await file.arrayBuffer();
+          console.log('Fichier converti en ArrayBuffer, taille:', arrayBuffer.byteLength);
+          
+          // Envoyer les données au worker
+          whisperWorker.postMessage({
+            type: 'transcribe',
+            audioData: arrayBuffer
+          });
+          console.log('Message envoyé au worker');
+        } catch (workerError) {
+          console.error('Erreur lors de l\'envoi au worker:', workerError);
+          throw workerError; // Propager l'erreur pour utiliser le fallback
+        }
       } else {
+        console.log('Worker non disponible, utilisation du mode de secours');
         // Fallback to mock implementation if worker is not available
         await mockProcessAudio(file);
       }
     } catch (error) {
-      console.error('Error processing file:', error);
-      alert('An error occurred while processing the file. Please try again.');
-      setIsProcessing(false);
+      console.error('Erreur lors du traitement du fichier:', error);
+      alert('Une erreur est survenue lors du traitement du fichier. Utilisation du mode de secours.');
+      // Utiliser le mode de secours en cas d'erreur
+      await mockProcessAudio(file);
     }
   };
 

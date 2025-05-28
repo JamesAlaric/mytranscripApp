@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 
 export default function ThemeToggle() {
@@ -36,13 +36,19 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleDarkMode}
-      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-      aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      aria-label={darkMode ? 'Passer au mode clair' : 'Passer au mode sombre'}
     >
       {darkMode ? (
-        <SunIcon className="h-6 w-6" />
+        <>
+          <SunIcon className="h-5 w-5 text-yellow-500" />
+          <span className="text-sm">Mode clair</span>
+        </>
       ) : (
-        <MoonIcon className="h-6 w-6" />
+        <>
+          <MoonIcon className="h-5 w-5 text-blue-500" />
+          <span className="text-sm">Mode sombre</span>
+        </>
       )}
     </button>
   );

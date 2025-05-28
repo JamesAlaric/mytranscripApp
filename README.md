@@ -1,4 +1,4 @@
-# Meeting Transcriber
+# myTranscript - Meeting Transcriber
 
 Une application web moderne pour la transcription et le résumé automatique de réunions.
 

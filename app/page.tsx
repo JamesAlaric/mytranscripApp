@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowUpTrayIcon, DocumentTextIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
-import ThemeToggle from '../components/ThemeToggle';
+import Navbar from '../components/Navbar';
 import FileUploader from '../components/FileUploader';
 import TranscriptionViewer from '../components/TranscriptionViewer';
 import SummaryViewer from '../components/SummaryViewer';
@@ -183,76 +183,96 @@ export default function Home() {
     printWindow.document.close();
   };
 
+  const resetTranscription = () => {
+    setTranscription('');
+    setSummary('');
+    setFileName('');
+  };
+
   return (
-    <main className="flex min-h-screen flex-col p-4 md:p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold">Meeting Transcriber</h1>
-        <ThemeToggle />
-      </div>
+    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
+      <Navbar 
+        onNewTranscription={resetTranscription} 
+        showNewButton={!!transcription} 
+      />
 
-      {!transcription && (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <FileUploader onFileUpload={handleFileUpload} isProcessing={isProcessing} />
-          
-          {isProcessing && (
-            <div className="w-full max-w-md mt-8">
-              <ProgressBar progress={progress} />
-              <p className="text-center mt-2">{statusMessage} {progress}%</p>
+      <main className="flex-1 container mx-auto px-4 py-8">
+        {!transcription && (
+          <div className="flex-1 flex flex-col items-center justify-center py-10">
+            <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 text-gray-800 dark:text-white">
+              Transcription de réunions
+            </h1>
+            <FileUploader onFileUpload={handleFileUpload} isProcessing={isProcessing} />
+            
+            {isProcessing && (
+              <div className="w-full max-w-lg mt-8">
+                <ProgressBar progress={progress} />
+                <p className="text-center mt-2 text-gray-700 dark:text-gray-300">
+                  {statusMessage} {progress}%
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {transcription && (
+          <div className="flex-1 flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                {fileName || 'Transcription'}
+              </h2>
+              
+              <div className="flex flex-wrap gap-2">
+                <div className="relative group">
+                  <button 
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <DocumentTextIcon className="h-5 w-5" />
+                    Exporter
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-10 hidden group-hover:block">
+                    <button
+                      onClick={() => exportToTxt(transcription, 'transcription')}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Transcription (TXT)
+                    </button>
+                    <button
+                      onClick={() => exportToPdf(transcription, 'Transcription')}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Transcription (PDF)
+                    </button>
+                    <button
+                      onClick={() => exportToTxt(summary, 'summary')}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Résumé (TXT)
+                    </button>
+                    <button
+                      onClick={() => exportToPdf(summary, 'Summary')}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Résumé (PDF)
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {transcription && (
-        <div className="flex-1 flex flex-col">
-          <div className="flex flex-wrap gap-4 mb-6">
-            <button
-              onClick={() => exportToTxt(transcription, 'transcription')}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <DocumentTextIcon className="h-5 w-5" />
-              Export Transcription (TXT)
-            </button>
-            <button
-              onClick={() => exportToPdf(transcription, 'Transcription')}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 transition-colors"
-            >
-              <DocumentTextIcon className="h-5 w-5" />
-              Export Transcription (PDF)
-            </button>
-            <button
-              onClick={() => exportToTxt(summary, 'summary')}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-            >
-              <DocumentDuplicateIcon className="h-5 w-5" />
-              Export Summary (TXT)
-            </button>
-            <button
-              onClick={() => exportToPdf(summary, 'Summary')}
-              className="flex items-center gap-2 px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-800 transition-colors"
-            >
-              <DocumentDuplicateIcon className="h-5 w-5" />
-              Export Summary (PDF)
-            </button>
-            <button
-              onClick={() => {
-                setTranscription('');
-                setSummary('');
-                setFileName('');
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-            >
-              <ArrowUpTrayIcon className="h-5 w-5" />
-              Upload New File
-            </button>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+              <TranscriptionViewer transcription={transcription} />
+              <SummaryViewer summary={summary} />
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TranscriptionViewer transcription={transcription} />
-            <SummaryViewer summary={summary} />
-          </div>
+        )}
+      </main>
+      
+      <footer className="py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+          &copy; {new Date().getFullYear()} myTranscript - Tous droits réservés
         </div>
-      )}
-    </main>
+      </footer>
+    </div>
   );
 }

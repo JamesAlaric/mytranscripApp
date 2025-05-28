@@ -22,7 +22,12 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
       self.postMessage({ status: 'processing', message: 'Transcribing audio...' });
       
       // Convert ArrayBuffer to Float32Array for processing
-      const audioContext = new AudioContext();
+      // Vérifier que nous sommes dans un environnement navigateur
+      if (typeof window === 'undefined' || typeof AudioContext === 'undefined') {
+        throw new Error('AudioContext is not available in this environment');
+      }
+      
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const audioBuffer = await audioContext.decodeAudioData(audioData);
       const audioData32 = audioBuffer.getChannelData(0);
       

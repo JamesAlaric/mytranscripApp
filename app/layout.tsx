@@ -6,8 +6,8 @@ import React from 'react';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'myTrancript - Meeting Transcriber',
-  description: 'Transcribe and summarize your meetings with AI',
+  title: 'myTranscript - Transcription de réunions',
+  description: 'Transcrivez et résumez vos réunions avec l\'IA',
 };
 
 export default function RootLayout({

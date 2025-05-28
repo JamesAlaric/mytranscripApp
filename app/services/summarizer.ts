@@ -69,7 +69,8 @@ export async function generateSummary(transcription: string): Promise<string> {
 function createStructuredSummary(transcription: string): string {
   // Extract speakers
   const speakerMatches = transcription.match(/Speaker \d+/g) || [];
-  const speakers = [...new Set(speakerMatches)];
+  // Convert Set to Array to avoid TypeScript iteration issues
+  const speakers = Array.from(new Set(speakerMatches));
   
   // Extract potential action items (sentences with future tense)
   const sentences = transcription.split(/[.!?]+/);

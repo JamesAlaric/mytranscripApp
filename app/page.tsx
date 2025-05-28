@@ -39,7 +39,8 @@ export default function Home() {
             setIsProcessing(false);
             setStatusMessage('Transcription terminée!');
           } else if (status === 'error') {
-            setStatusMessage(`Erreur: ${message}`);
+            console.error('Error from worker:', message); // Log the detailed error
+            setStatusMessage(`Erreur: ${message}`); // Display the error
             setIsProcessing(false);
           } else {
             setStatusMessage(message || 'Traitement en cours...');
@@ -144,32 +145,42 @@ export default function Home() {
   const handleGenerateSummary = () => {
     setIsSummarizing(true);
     setActiveTab('summary');
-    
-    // Simulate summary generation
-    setTimeout(() => {
-      const summaryObj = {
-        mainPoints: [
-          "Les résultats du premier trimestre ont dépassé les attentes",
-          "Facteurs de succès: lancement d'un nouveau produit, amélioration du marketing, expansion de l'équipe",
-          "Plans pour le T2: expansion du marché et fidélisation des clients",
-          "Le budget pour les plans du T2 a été approuvé"
-        ],
-        actionItems: [
-          "Partager la présentation avec l'équipe",
-          "Se réunir à nouveau la semaine prochaine",
-          "Préparer l'expansion du marché",
-          "Développer une stratégie de fidélisation des clients"
-        ],
-        speakers: [
-          "Pierre (Présentateur principal)",
-          "Marie",
-          "Thomas"
-        ]
-      };
+    setStatusMessage('Génération du résumé en cours...'); // Optional: provide status
+
+    try {
+      // Ensure 'transcription' is the current, potentially edited, transcription state
+      if (!transcription || transcription.trim() === '') {
+        setSummary('Erreur: La transcription est vide, impossible de générer un résumé.');
+        setIsSummarizing(false);
+        setStatusMessage('Échec de la génération du résumé.');
+        return;
+      }
       
-      setSummary(JSON.stringify(summaryObj, null, 2));
+      const result = await generateSummary(transcription);
+      setSummary(result); // 'result' will be the summary string or an error message string
+      
+      // The 'formatSummary' in summarizer.ts should handle the structure.
+      // If 'result' starts with "Error:", SummaryViewer should display it as an error.
+      
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+      // The generateSummary service itself should return a string error message
+      // This catch is a fallback for unexpected errors in the calling process
+      if (error instanceof Error) {
+        setSummary(`Erreur inattendue lors de la génération du résumé: ${error.message}`);
+      } else {
+        setSummary('Erreur inattendue lors de la génération du résumé.');
+      }
+    } finally {
       setIsSummarizing(false);
-    }, 2000);
+      // Update status message based on whether 'summary' contains an error
+      // This logic might need refinement based on how errors are consistently reported
+      if (summary.startsWith('Error:')) { // A bit simplistic, depends on error format from service
+        setStatusMessage('Échec de la génération du résumé.');
+      } else {
+        setStatusMessage('Résumé généré!');
+      }
+    }
   };
   
   const handleTranscriptionUpdate = (updatedTranscription: string) => {
@@ -189,17 +200,20 @@ export default function Home() {
             <FileUploader onFileUpload={handleFileUpload} isProcessing={isProcessing} />
           </div>
           
-          {isProcessing && (
+          {/* Unified status display for transcription processing and summary completion/failure messages */}
+          {(isProcessing || (statusMessage && (activeTab === 'summary' || statusMessage.includes("Transcription terminée")))) && !isSummarizing && (
             <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
                 {statusMessage}
               </h2>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out" 
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
+              {isProcessing && ( // Only show progress bar for transcription processing
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out" 
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              )}
             </div>
           )}
           
@@ -208,21 +222,33 @@ export default function Home() {
               <div className="flex justify-between items-center mb-4">
                 <TabsList className="grid grid-cols-2 w-[400px]">
                   <TabsTrigger value="transcription">Transcription</TabsTrigger>
-                  <TabsTrigger value="summary" disabled={!canGenerateSummary && !summary}>Résumé</TabsTrigger>
+                  <TabsTrigger value="summary" disabled={!canGenerateSummary && !summary && !isSummarizing}>Résumé</TabsTrigger>
                 </TabsList>
                 
-                {activeTab === 'transcription' && canGenerateSummary && !summary && (
+                {activeTab === 'transcription' && canGenerateSummary && (!summary || summary.startsWith("Error:")) && (
                   <button 
                     onClick={handleGenerateSummary}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                    disabled={isSummarizing}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50"
+                    disabled={isSummarizing || !transcription.trim()}
                   >
-                    {isSummarizing ? 'Génération en cours...' : 'Générer le résumé'}
+                    {isSummarizing ? 'Génération du résumé...' : 'Générer le résumé'}
+                  </button>
+                )}
+                 {activeTab === 'summary' && summary && !summary.startsWith("Error:") && canGenerateSummary && (
+                  <button
+                    onClick={handleGenerateSummary} // Allow re-generation
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50"
+                    disabled={isSummarizing || !transcription.trim()}
+                  >
+                    {isSummarizing ? 'Re-génération...' : 'Re-générer le résumé'}
                   </button>
                 )}
               </div>
               
-              <TabsContent value="transcription" className="mt-0">
+              <TabsContent 
+                value="transcription" 
+                className="mt-4 p-6 bg-white dark:bg-gray-800/50 rounded-lg shadow-md"
+              >
                 <TranscriptionPanel 
                   transcription={transcription} 
                   audioFile={audioFile} 
@@ -230,7 +256,10 @@ export default function Home() {
                 />
               </TabsContent>
               
-              <TabsContent value="summary" className="mt-0">
+              <TabsContent 
+                value="summary" 
+                className="mt-4 p-6 bg-white dark:bg-gray-800/50 rounded-lg shadow-md"
+              >
                 <SummaryPanel 
                   summary={summary} 
                   isGenerating={isSummarizing} 

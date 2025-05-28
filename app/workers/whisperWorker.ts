@@ -173,15 +173,17 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
           });
           
         } catch (processingError: unknown) {
-          console.error('Erreur lors du traitement audio:', processingError);
-          
-          // En cas d'erreur, utiliser un mock pour montrer que l'application fonctionne
+          console.error('Worker: Audio processing failed', processingError);
+          const specificErrorMessage = processingError instanceof Error ? processingError.message : 'Unknown error during audio processing';
+          self.postMessage({
+            status: 'error',
+            message: `Audio processing failed: ${specificErrorMessage}`
+          });
+          // Kept the mock data block below in case it's needed for a specific demo mode later,
+          // but it's not used automatically on error anymore.
+          /*
           console.log('Worker: Utilisation du mode de secours (mock)');
-          
-          // Simuler un délai pour donner l'impression que le traitement se fait
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Envoyer une transcription factice avec format timestamp et locuteurs
           const mockTranscription = `
 [00:00:05] Pierre: Bonjour à tous, merci de vous joindre à cette réunion.
 [00:00:10] Pierre: Aujourd'hui, nous allons discuter des résultats trimestriels et des plans futurs.
@@ -197,29 +199,29 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
 [00:01:45] Marie: Excellent, j'ai hâte de voir les résultats.
 [00:01:55] Pierre: Merci à tous pour votre contribution. Retrouvons-nous la semaine prochaine.
 `;
-          
           self.postMessage({ 
             status: 'complete', 
             transcription: mockTranscription.trim(),
             message: 'Transcription terminée (mode de secours)!' 
           });
+          */
         }
         
       } catch (error: unknown) {
-        console.error('Erreur de transcription:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue pendant la transcription';
+        console.error('Worker: Model loading or transcription setup failed', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error during model loading or setup';
         self.postMessage({ 
           status: 'error', 
-          message: `Erreur pendant la transcription: ${errorMessage}` 
+          message: `Failed to load transcription model or setup: ${errorMessage}`
         });
       }
     }
   } catch (error: unknown) {
-    console.error('Erreur dans le worker:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue dans le worker';
+    console.error('Worker: Generic error', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error in worker'; // More generic for the outermost catch
     self.postMessage({ 
       status: 'error', 
-      message: `Erreur dans le worker: ${errorMessage}` 
+      message: `Worker error: ${errorMessage}` 
     });
   }
 });

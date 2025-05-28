@@ -12,19 +12,18 @@ const HUGGING_FACE_INFERENCE_API = 'https://api-inference.huggingface.co/models/
  */
 export async function generateSummary(transcription: string): Promise<string> {
   try {
-    // For development/demo purposes, we'll use a mock summary
-    // In production, this would call the Hugging Face API
+    // For development/demo purposes, the mock summary logic below is commented out.
+    // The actual API call is now active.
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Simulate API delay - COMMENTED OUT
+    // await new Promise(resolve => setTimeout(resolve, 2000)); 
     
-    // Create a structured summary based on the transcription content
-    // This is a placeholder - in a real implementation, we would use the API
-    const summary = createStructuredSummary(transcription);
-    return summary;
+    // Create a structured summary based on the transcription content - COMMENTED OUT
+    // const summary = createStructuredSummary(transcription);
+    // return summary;
     
-    // Uncomment to use the actual API (requires API token)
-    /*
+    // --- HUGGING FACE API CALL ---
+    console.warn("IMPORTANT: Replace 'Bearer YOUR_HUGGING_FACE_TOKEN' in app/services/summarizer.ts with your actual Hugging Face API token for summarization to work.");
     const prompt = `
       Summarize the following meeting transcript into a structured format:
       
@@ -43,21 +42,33 @@ export async function generateSummary(transcription: string): Promise<string> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_HUGGING_FACE_TOKEN' // Would be stored securely
+        // IMPORTANT: Replace with your actual Hugging Face API token
+        'Authorization': 'Bearer YOUR_HUGGING_FACE_TOKEN' 
       },
       body: JSON.stringify({ inputs: prompt }),
     });
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorBody = await response.text(); // Try to get more error info
+      console.error('API Error Response Body:', errorBody);
+      throw new Error(`API error: ${response.status} ${response.statusText}. Details: ${errorBody}`);
     }
     
     const result = await response.json();
-    return formatSummary(result[0].generated_text);
-    */
+    if (result && result[0] && result[0].generated_text) {
+      return formatSummary(result[0].generated_text);
+    } else {
+      console.error('Unexpected API response structure:', result);
+      throw new Error('Failed to parse summary from API response.');
+    }
+    // --- END HUGGING FACE API CALL ---
+
   } catch (error) {
-    console.error('Error generating summary:', error);
-    return 'Error generating summary. Please try again.';
+    console.error('Error in generateSummary:', error);
+    if (error instanceof Error) {
+      return `Error generating summary: ${error.message}`;
+    }
+    return 'An unknown error occurred while generating the summary.';
   }
 }
 
